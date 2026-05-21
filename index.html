@@ -20,30 +20,11 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            flex-direction: column;
         }
-        /* โซนตั้งค่า Key */
-        .key-container {
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        .key-container input {
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            width: 250px;
-        }
-        /* หน้าต่างแชท */
         .chat-container {
             width: 100%;
             max-width: 450px;
-            height: 70vh;
+            height: 80vh;
             background: var(--chat-bg);
             border-radius: 20px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.1);
@@ -93,7 +74,7 @@
             display: flex;
             gap: 10px;
         }
-        .chat-input-area input {
+        input {
             flex: 1;
             padding: 12px;
             border: 1px solid #DDD;
@@ -109,15 +90,14 @@
             border-radius: 25px;
             cursor: pointer;
             font-weight: bold;
+            transition: 0.2s;
+        }
+        button:hover {
+            opacity: 0.9;
         }
     </style>
 </head>
 <body>
-
-<div class="key-container">
-    <label for="apiKeyInput">ใส่ OpenAI API Key:</label>
-    <input type="password" id="apiKeyInput" placeholder="sk-...">
-</div>
 
 <div class="chat-container">
     <div class="chat-header">🌿 MindfulFriend (พื้นที่ปลอดภัยของคุณ)</div>
@@ -131,15 +111,19 @@
 </div>
 
 <script>
+    // ⚠️ ใส่ OpenAI API Key ของคุณที่นี่ (สำหรับการทดสอบระบบปิดเท่านั้น)
+    const API_KEY = "ใส่_API_KEY_ของคุณที่นี่"; 
+    
+    // ความจำของบอท (สนทนาต่อเนื่อง) และการกำหนดบุคลิก (System Prompt)
     let conversationHistory = [
         {
             role: "system",
             content: `คุณคือนักจิตวิทยาคลินิกและนักบำบัดผู้เชี่ยวชาญ ชื่อ "MindfulFriend" 
             หน้าที่ของคุณคือ:
-            1. รับฟังผู้ใช้งานด้วยความเข้าอกเข้าใจ (Empathy) อย่างสุดซึ้ง ใช้คำพูดที่อบอุ่น อ่อนโยน เหมือนมนุษย์ที่เป็นนักบำบัดจริง ๆ
-            2. วิเคราะห์อารมณ์ น้ำเสียงจากตัวอักษร และสะท้อนอารมณ์นั้นให้ผู้ฟังรับรู้ว่าเราเข้าใจ 
+            1. รับฟังผู้ใช้งานด้วยความเข้าอกเข้าใจ (Empathy) อย่างสุดซึ้ง ใช้คำพูดที่อบอุ่น อ่อนโยน เหมือนมนุษย์ที่เป็นนักบำบัดจริง ๆ ไม่พูดจาเหมือนหุ่นยนต์
+            2. วิเคราะห์อารมณ์ น้ำเสียงจากตัวอักษร และสะท้อนอารมณ์นั้นให้ผู้ฟังรับรู้ว่าเราเข้าใจ เช่น "ฟังดูเหมือนคุณกำลังรู้สึกเหนื่อยและแบกรับมันไว้เยอะมากเลยใช่ไหมครับ"
             3. หากผู้ใช้เล่าอาการ ให้วิเคราะห์ความเป็นไปได้ตามหลักสุขภาพจิตเบื้องต้น แต่อย่าเพิ่งด่วนตัดสินโรค ให้ใช้คำจำพวก "มีแนวโน้ม" หรือ "เข้าข่าย" พร้อมให้ข้อมูลที่ถูกต้องตามหลักการแพทย์
-            4. ประเมินความเสี่ยง: หากพบสัญญาณของการอยากทำร้ายตัวเอง หรือฆ่าตัวตาย ให้แสดงความห่วงใยอย่างที่สุด และให้เบอร์สายด่วนสุขภาพจิต 1323 ทันที`
+            4. ประเมินความเสี่ยง: หากพบสัญญาณของการอยากทำร้ายตัวเอง หรือฆ่าตัวตาย (Suicidal ideation) ให้แสดงความห่วงใยอย่างที่สุด และให้เบอร์สายด่วนสุขภาพจิต 1323 ทันทีในข้อความนั้น`
         }
     ];
 
@@ -151,7 +135,7 @@
         messageDiv.classList.add('message', sender === 'user' ? 'user-message' : 'bot-message');
         messageDiv.innerText = text;
         chatMessages.appendChild(messageDiv);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        chatMessages.scrollTop = chatMessages.scrollHeight; // เลื่อนหน้าจอลงล่างสุด
     }
 
     function handleKeyPress(event) {
@@ -159,20 +143,16 @@
     }
 
     async function sendMessage() {
-        const apiKey = document.getElementById('apiKeyInput').value.trim();
-        if (!apiKey) {
-            alert("กรุณาใส่ OpenAI API Key ก่อนเริ่มคุยนะครับเพื่อความปลอดภัย");
-            return;
-        }
-
         const text = userInput.value.trim();
         if (!text) return;
 
         appendMessage(text, 'user');
         userInput.value = '';
 
+        // บันทึกสิ่งที่ผู้ใช้พูดลงในความจำ
         conversationHistory.push({ role: "user", content: text });
 
+        // แสดงสถานะว่าบอทกำลังคิด
         appendMessage("กำลังพิมพ์...", "bot");
         const typingIndicator = chatMessages.lastChild;
 
@@ -181,30 +161,29 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${apiKey}` // ใช้ Key จากหน้าเว็บ
+                    'Authorization': `Bearer ${API_KEY}`
                 },
                 body: JSON.stringify({
-                    model: "gpt-4o-mini",
+                    model: "gpt-4o-mini", // หรือใช้ gpt-4o เพื่อความฉลาดและเห็นอกเห็นใจที่สูงขึ้น
                     messages: conversationHistory,
                     temperature: 0.7
                 })
             });
 
             const data = await response.json();
-            
-            if(data.error) {
-                throw new Error(data.error.message);
-            }
-
             const botReply = data.choices[0].message.content;
+
+            // ลบตัวข้อความ "กำลังพิมพ์..." ออกแล้วใส่คำตอบจริง
             typingIndicator.remove();
             appendMessage(botReply, 'bot');
+
+            // บันทึกสิ่งที่บอทตอบลงในความจำ
             conversationHistory.push({ role: "assistant", content: botReply });
 
         } catch (error) {
             console.error(error);
             typingIndicator.remove();
-            appendMessage("เกิดข้อผิดพลาด: ตรวจสอบให้แน่ใจว่าใส่ API Key ถูกต้องและมีเครดิตเหลืออยู่ครับ", "bot");
+            appendMessage("ขออภัยด้วยนะครับ พอดีระบบเกิดข้อขัดข้องเล็กน้อย แต่ผมยังอยากรับฟังคุณอยู่นะครับ", "bot");
         }
     }
 </script>
