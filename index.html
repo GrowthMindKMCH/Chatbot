@@ -3,13 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MindfulFriend - AI ผู้รับฟังใจดี</title>
+    <title>MindfulFriend - Advanced Crisis Detection</title>
     <style>
         :root {
-            --primary-color: #76A5AF;
-            --bg-color: #F4F7F6;
+            --primary-color: #5C827D;
+            --secondary-color: #E2ECE9;
+            --crisis-color: #FADBD8;
+            --crisis-text: #78281F;
+            --bg-color: #F0F4F3;
             --chat-bg: #FFFFFF;
-            --text-color: #4A4A4A;
+            --text-color: #2C3E50;
         }
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
@@ -23,11 +26,11 @@
         }
         .chat-container {
             width: 100%;
-            max-width: 450px;
-            height: 80vh;
+            max-width: 500px;
+            height: 90vh;
             background: var(--chat-bg);
-            border-radius: 20px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            border-radius: 24px;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.08);
             display: flex;
             flex-direction: column;
             overflow: hidden;
@@ -46,14 +49,15 @@
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 14px;
         }
         .message {
-            max-width: 75%;
-            padding: 12px 16px;
-            border-radius: 15px;
+            max-width: 80%;
+            padding: 14px 18px;
+            border-radius: 18px;
             font-size: 0.95rem;
-            line-height: 1.4;
+            line-height: 1.6;
+            white-space: pre-line;
         }
         .user-message {
             background-color: var(--primary-color);
@@ -62,10 +66,36 @@
             border-bottom-right-radius: 2px;
         }
         .bot-message {
-            background-color: #EAEAEA;
+            background-color: var(--secondary-color);
             color: var(--text-color);
             align-self: flex-start;
             border-bottom-left-radius: 2px;
+        }
+        /* กล่องข้อความแจ้งเตือนวิกฤต/สิ้นหวัง */
+        .crisis-message {
+            background-color: var(--crisis-color) !important;
+            color: var(--crisis-text) !important;
+            border: 1px solid #F5B7B1;
+        }
+        .option-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .opt-btn {
+            background-color: white;
+            border: 1.5px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 8px 12px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            text-align: left;
+        }
+        .opt-btn:hover {
+            background-color: var(--primary-color);
+            color: white;
         }
         .chat-input-area {
             padding: 15px;
@@ -76,115 +106,256 @@
         }
         input {
             flex: 1;
-            padding: 12px;
+            padding: 14px;
             border: 1px solid #DDD;
             border-radius: 25px;
             outline: none;
             font-size: 0.95rem;
         }
-        button {
+        .send-btn {
             background-color: var(--primary-color);
             color: white;
             border: none;
-            padding: 0 20px;
+            padding: 0 22px;
             border-radius: 25px;
             cursor: pointer;
             font-weight: bold;
-            transition: 0.2s;
-        }
-        button:hover {
-            opacity: 0.9;
         }
     </style>
 </head>
 <body>
 
 <div class="chat-container">
-    <div class="chat-header">🌿 MindfulFriend (พื้นที่ปลอดภัยของคุณ)</div>
+    <div class="chat-header">🌿 MindfulFriend (พื้นที่รับฟังและดูแลใจ)</div>
     <div class="chat-messages" id="chatMessages">
-        <div class="message bot-message">สวัสดีครับ วันนี้มีเรื่องอะไรที่ทำให้ไม่สบายใจ หรืออยากระบายให้ผมฟังไหมครับ? ผมพร้อมรับฟังคุณเสมอนะ</div>
+        <div class="message bot-message">สวัสดีครับ ผมคือ MindfulFriend วันนี้ไม่ว่าคุณจะเจอเรื่องหนักหนา หรือรู้สึกมืดแปดด้านแค่ไหน... พื้นที่ตรงนี้ปลอดภัยและพร้อมรับฟังคุณเสมอนะครับ เล่าให้ผมฟังได้เลยนะ</div>
     </div>
     <div class="chat-input-area">
-        <input type="text" id="userInput" placeholder="พิมพ์ข้อความของคุณที่นี่..." onkeypress="handleKeyPress(event)">
-        <button onclick="sendMessage()">ส่ง</button>
+        <input type="text" id="userInput" placeholder="พิมพ์ข้อความคุยกับบอทที่นี่..." onkeypress="handleKeyPress(event)">
+        <button class="send-btn" onclick="sendMessage()">ส่ง</button>
     </div>
 </div>
 
 <script>
-    // ⚠️ ใส่ OpenAI API Key ของคุณที่นี่ (สำหรับการทดสอบระบบปิดเท่านั้น)
-    const API_KEY = "ใส่_API_KEY_ของคุณที่นี่"; 
-    
-    // ความจำของบอท (สนทนาต่อเนื่อง) และการกำหนดบุคลิก (System Prompt)
-    let conversationHistory = [
-        {
-            role: "system",
-            content: `คุณคือนักจิตวิทยาคลินิกและนักบำบัดผู้เชี่ยวชาญ ชื่อ "MindfulFriend" 
-            หน้าที่ของคุณคือ:
-            1. รับฟังผู้ใช้งานด้วยความเข้าอกเข้าใจ (Empathy) อย่างสุดซึ้ง ใช้คำพูดที่อบอุ่น อ่อนโยน เหมือนมนุษย์ที่เป็นนักบำบัดจริง ๆ ไม่พูดจาเหมือนหุ่นยนต์
-            2. วิเคราะห์อารมณ์ น้ำเสียงจากตัวอักษร และสะท้อนอารมณ์นั้นให้ผู้ฟังรับรู้ว่าเราเข้าใจ เช่น "ฟังดูเหมือนคุณกำลังรู้สึกเหนื่อยและแบกรับมันไว้เยอะมากเลยใช่ไหมครับ"
-            3. หากผู้ใช้เล่าอาการ ให้วิเคราะห์ความเป็นไปได้ตามหลักสุขภาพจิตเบื้องต้น แต่อย่าเพิ่งด่วนตัดสินโรค ให้ใช้คำจำพวก "มีแนวโน้ม" หรือ "เข้าข่าย" พร้อมให้ข้อมูลที่ถูกต้องตามหลักการแพทย์
-            4. ประเมินความเสี่ยง: หากพบสัญญาณของการอยากทำร้ายตัวเอง หรือฆ่าตัวตาย (Suicidal ideation) ให้แสดงความห่วงใยอย่างที่สุด และให้เบอร์สายด่วนสุขภาพจิต 1323 ทันทีในข้อความนั้น`
-        }
-    ];
+    let isSurveyActive = false;
+    let surveyType = "";
+    let currentQuestionIndex = 0;
+    let totalScore = 0;
 
     const chatMessages = document.getElementById('chatMessages');
     const userInput = document.getElementById('userInput');
 
-    function appendMessage(text, sender) {
+    function appendMessage(text, sender, isCrisis = false) {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message', sender === 'user' ? 'user-message' : 'bot-message');
-        messageDiv.innerText = text;
+        if (isCrisis) {
+            messageDiv.classList.add('crisis-message');
+        }
+        messageDiv.innerHTML = text;
         chatMessages.appendChild(messageDiv);
-        chatMessages.scrollTop = chatMessages.scrollHeight; // เลื่อนหน้าจอลงล่างสุด
+        chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
     function handleKeyPress(event) {
         if (event.key === 'Enter') sendMessage();
     }
 
-    async function sendMessage() {
+    function sendMessage() {
         const text = userInput.value.trim();
         if (!text) return;
 
         appendMessage(text, 'user');
         userInput.value = '';
 
-        // บันทึกสิ่งที่ผู้ใช้พูดลงในความจำ
-        conversationHistory.push({ role: "user", content: text });
+        setTimeout(() => {
+            if (isSurveyActive) {
+                appendMessage("❌ กรุณาเลือกตอบจากตัวเลือกด้านบนก่อนนะครับ เพื่อประเมินผลต่อ", "bot");
+                return;
+            }
+            processTextLogic(text);
+        }, 600);
+    }
 
-        // แสดงสถานะว่าบอทกำลังคิด
-        appendMessage("กำลังพิมพ์...", "bot");
-        const typingIndicator = chatMessages.lastChild;
+    // 🧠 ระบบวิเคราะห์และตรวจจับระดับอารมณ์เชิงลึก
+    function processTextLogic(userText) {
+        const t = userText.toLowerCase();
 
-        try {
-            const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${API_KEY}`
-                },
-                body: JSON.stringify({
-                    model: "gpt-4o-mini", // หรือใช้ gpt-4o เพื่อความฉลาดและเห็นอกเห็นใจที่สูงขึ้น
-                    messages: conversationHistory,
-                    temperature: 0.7
-                })
-            });
+        // 🟥 ระดับ 1: ตรวจพบภาวะสิ้นหวัง (Hopelessness) & ไร้ที่พึ่ง (Helplessness) ขั้นวิกฤต/เสี่ยงทำร้ายตัวเอง
+        const highCrisisKeywords = [
+            "ตาย", "อยากตาย", "ไม่อยากอยู่", "ฆ่าตัวตาย", "ทำร้ายตัวเอง", "กรีด", "โดดตึก", "ผูกคอ", "ลาโลก",
+            "ไม่ไหวแล้วอยากจบ", "ไม่มีทางออกแล้ว", "มืดแปดด้าน", "ไม่มีใครช่วยได้", "อยู่ไปก็ไม่มีประโยชน์",
+            "เหนื่อยจนไม่อยากตื่น", "ทรมานเกินไป", "เกินจะรับไหว"
+        ];
 
-            const data = await response.json();
-            const botReply = data.choices[0].message.content;
+        if (highCrisisKeywords.some(k => t.includes(k))) {
+            const crisisReply = `❤️ **[รับรู้ถึงความเจ็บปวดอันล้นพ้นของคุณ]** ประโยคที่คุณพิมพ์มา มันทำให้ผมรู้สึกเป็นห่วงคุณอย่างที่สุด... ผมรับรู้ได้เลยว่าตอนนี้คุณกำลังจมอยู่กับความทุกข์ที่หนักหนาสาหัส ราวกับโลกทั้งใบไม่มีทางออกและไม่มีใครคอยช่วยเลยใช่ไหมครับ...
 
-            // ลบตัวข้อความ "กำลังพิมพ์..." ออกแล้วใส่คำตอบจริง
-            typingIndicator.remove();
-            appendMessage(botReply, 'bot');
+            ความรู้สึกดิ่ง สิ้นหวัง หรือไร้ที่พึ่งพิง เป็นสิ่งที่เกิดขึ้นได้เมื่อจิตใจเราแบกรับเรื่องราวเหนื่อยล้ามานานเกินไป แต่มันไม่ได้แปลว่าคุณต้องเผชิญมันอย่างโดดเดี่ยวนะครับ
 
-            // บันทึกสิ่งที่บอทตอบลงในความจำ
-            conversationHistory.push({ role: "assistant", content: botReply });
+            **🌿 สิ่งที่คุณสามารถทำได้ในตอนนี้เพื่อดูแลใจตัวเอง:**
+            1. **หยุดพักและหายใจ:** หลับตาลงช้า ๆ สูดหายใจเข้าลึก ๆ ให้ท้องพองออก แล้วค่อย ๆ ผ่อนลมหายใจออกยาว ๆ ทำซ้ำ 5 ครั้งเพื่อดึงสติกลับมาอยู่กับปัจจุบัน
+            2. **มองหาความช่วยเหลือทางวิชาชีพ:** ตอนนี้ความรู้สึกมันอาจจะเกินกำลังที่รับมือไหว แนะนำให้โทรหา **สายด่วนสุขภาพจิต 1323** หรือ **สมาคมสะมาริตันส์ 02-113-6789** (โทรฟรี ตลอด 24 ชม.) ทันทีครับ มีคนที่พร้อมโอบกอดและรับฟังคุณอยู่ตรงนั้นนะ
+            3. **บอกคนที่ไว้ใจ:** ส่งข้อความหรือโทรหาเพื่อนสนิท หรือครอบครัวที่คุณรัก บอกเขาตรง ๆ ว่าตอนนี้ต้องการคนอยู่เป็นเพื่อนนะครับ
 
-        } catch (error) {
-            console.error(error);
-            typingIndicator.remove();
-            appendMessage("ขออภัยด้วยนะครับ พอดีระบบเกิดข้อขัดข้องเล็กน้อย แต่ผมยังอยากรับฟังคุณอยู่นะครับ", "bot");
+            *ผมอยากให้คุณปลอดภัย และเชื่อมั่นว่าพายุในใจลูกนี้จะค่อย ๆ ผ่านไปได้ครับ*`;
+            
+            appendMessage(crisisReply, 'bot', true); // ส่งสัญญาณเตือนเป็นกล่องสีแดงอ่อน
+            return;
         }
+
+        // 🟨 ระดับ 2: ภาวะหมดหวัง/น้อยใจ/โดดเดี่ยว ระดับเริ่มต้น (Sub-clinical Hopelessness)
+        const mildCrisisKeywords = [
+            "ไร้ค่า", "ไม่มีใครรัก", "โดดเดี่ยว", "ล้มเหลว", "แย่ที่สุด", "ทำอะไรก็ผิด", "ไม่มีความหมาย",
+            "ท้อแท้", "หมดหวัง", "เหงา", "เกลียดตัวเอง", "เหนื่อยกับชีวิต"
+        ];
+
+        if (mildCrisisKeywords.some(k => t.includes(k))) {
+            const mildReply = `🌿 ฟังคำพูดของคุณแล้ว รับรู้ได้ถึงความเหนื่อยล้า ความโดดเดี่ยว และความรู้สึกเหมือนกำลังต่อสู้กับอะไรบางอย่างอยู่คนเดียวเลยครับ... ไม่ง่ายเลยนะที่จะต้องแบกความรู้สึกว่าตัวเองล้มเหลวหรือไร้ค่าเอาไว้แบบนี้
+
+            ในทางจิตวิทยา อารมณ์ลบ ๆ ในตอนนี้มันเหมือน 'แว่นตาสีดำ' ที่กำลังบังคับให้คุณมองเห็นแต่ข้อบกพร่องของตัวเอง แต่อยากให้รู้ว่า นั่นไม่ใช่ความจริงทั้งหมดของคุณนะครับ คุณพยายามและเก่งมาก ๆ แล้วที่พาตัวเองผ่านแต่ละวันมาได้ถึงขนาดนี้
+
+            **💡 ลองทำสิ่งนี้ดูดีไหมครับ:**
+            คุณอยากลองทำแบบคัดกรอง **'ภาวะอารมณ์และซึมเศร้า (DSM-5)'** สั้น ๆ สัก 7 ข้อไหม? เพื่อให้เราเข้าใจกันมากขึ้นว่าความสิ้นหวังนี้เกิดจากสารเคมีในสมองหรือความเครียด และจะได้รับคำแนะนำที่ตรงจุดครับ`;
+            
+            appendMessage(mildReply, 'bot');
+            createOptionButtons([
+                { text: "📊 ใช่ครับ อยากทำแบบประเมิน", action: () => startDepressionSurvey() },
+                { text: "💬 ไม่เป็นไร อยากระบายเฉย ๆ", action: () => cancelToTalk() }
+            ]);
+            return;
+        }
+
+        // 🛌 สัญญาณนอนไม่หลับ (Insomnia)
+        if (["นอนไม่หลับ", "ตาค้าง", "ตื่นกลางดึก", "หลับยาก", "เพลียตอนเช้า"].some(k => t.includes(k))) {
+            askToStartSurvey('insomnia', "มีปัญหานอนไม่หลับเข้ามารบกวนด้วยใช่ไหมครับ? อาการนอนไม่หลับและการพักผ่อนที่ไม่เพียงพอ ส่งผลโดยตรงให้สมองเราคิดลบและรู้สึกดิ่ง สิ้นหวังได้ง่ายขึ้นมากเลยครับ เรามาเช็คอาการนอนไม่หลับตามเกณฑ์สากลกันไหม?");
+            return;
+        }
+
+        // 🟢 ข้อความทั่วไป
+        const defaultResponses = [
+            "ขอบคุณที่เล่าให้ผมฟังนะครับ เรื่องนี้ส่งผลต่อความรู้สึกข้างในของคุณอย่างไรบ้าง เล่าระบายออกมาได้อีกเรื่อย ๆ เลยนะ ผมพร้อมอยู่ข้าง ๆ คุณ",
+            "ฟังดูเป็นสถานการณ์ที่บีบคั้นอารมณ์และความรู้สึกคุณมาก ๆ เลย... ตอนนี้คุณรู้สึกเหงา หรือต้องการความช่วยเหลือด้านไหนเป็นพิเศษไหมครับ?",
+            "ผมรับรู้และยินดีรับฟังทุกเรื่องราวเลยครับ วันนี้ถ้าเหนื่อยมาก ๆ ลองเอนหลัง พิมพ์ระบายมันออกมาให้หมด ไม่ต้องเก็บมันไว้คนเดียวนะครับ"
+        ];
+        const randomDefault = defaultResponses[Math.floor(Math.random() * defaultResponses.length)];
+        appendMessage(randomDefault, 'bot');
+    }
+
+    // --- ส่วนเชื่อมต่อแบบสอบถาม (คงไว้ตามฟังก์ชันเดิม) ---
+    function startDepressionSurvey() {
+        isSurveyActive = true;
+        surveyType = "depression";
+        currentQuestionIndex = 0;
+        totalScore = 0;
+        nextSurveyQuestion();
+    }
+
+    function cancelToTalk() {
+        isSurveyActive = false;
+        appendMessage("ยินดีครับ พิมพ์เล่าเรื่องที่ทำให้หนักใจต่อได้เลยนะ ผมจะอยู่ตรงนี้คอยอ่านและรับฟังคุณเองครับ", "bot");
+    }
+
+    const surveys = {
+        depression: {
+            title: "แบบประเมินภาวะซึมเศร้าเบื้องต้น (DSM-5 MDD)",
+            questions: [
+                "1. ในช่วง 2 สัปดาห์ที่ผ่านมา คุณรู้สึกหดหู่ เศร้า หรือท้อแท้แทบทั้งวันเกือบทุกวันไหมครับ?",
+                "2. คุณรู้สึกหมดความสนใจหรือความสุขในกิจกรรมที่เคยชอบทำอย่างมากไหม?",
+                "3. มีปัญหาเรื่องการนอน (นอนไม่หลับเลย หรือนอนมากเกินไป) เกือบทุกวันไหมครับ?",
+                "4. รู้สึกเหนื่อยล้า อ่อนเพลีย ไม่มีแรง เกือบทุกวันไหม?",
+                "5. รู้สึกตนเองไร้ค่า หรือรู้สึกผิดมากเกินไปในเรื่องที่ผ่านมารึเปล่าครับ?",
+                "6. มีสมาธิลดลง ใจลอย หรือลังเลใจในการตัดสินใจเรื่องง่าย ๆ ไหม?",
+                "7. เคยมีความคิดเกี่ยวกับความตาย หรือคิดว่าถ้าตายไปคงจะดีกว่าไหมครับ?"
+            ]
+        },
+        insomnia: {
+            title: "แบบประเมินภาวะนอนไม่หลับ (Insomnia Screening)",
+            questions: [
+                "1. คุณมีปัญหาเริ่มหลับได้ยาก (ใช้เวลาเกิน 30 นาทีกว่าจะหลับ) บ่อยไหมครับ?",
+                "2. มีปัญหานอนสะดุ้งตื่นกลางดึกบ่อย ๆ แล้วหลับต่อได้ยากไหม?",
+                "3. ตื่นนอนเช้าเกินไปแล้วไม่สามารถนอนหลับต่อได้อีกรึเปล่า?",
+                "4. คุณรู้สึกว่าการนอนไม่หลับนี้กระทบต่อการทำงาน อารมณ์ หรือการใช้ชีวิตในตอนกลางวันไหม?"
+            ]
+        }
+    };
+
+    function askToStartSurvey(type, introText) {
+        isSurveyActive = true;
+        surveyType = type;
+        currentQuestionIndex = 0;
+        totalScore = 0;
+        appendMessage(`${introText}<br><br><b>คุณพร้อมที่จะทำแบบประเมินเลยไหมครับ?</b>`, "bot");
+        createOptionButtons([
+            { text: "พร้อมแล้ว เริ่มเลย", action: () => nextSurveyQuestion() },
+            { text: "ยังไม่พร้อม/คุยเรื่องอื่นก่อน", action: () => cancelToTalk() }
+        ]);
+    }
+
+    function nextSurveyQuestion() {
+        const currentSurvey = surveys[surveyType];
+        if (currentQuestionIndex < currentSurvey.questions.length) {
+            const qText = currentSurvey.questions[currentQuestionIndex];
+            appendMessage(`<b>${currentSurvey.title}</b><br><br>${qText}`, "bot");
+            createOptionButtons([
+                { text: "❌ ไม่มีเลย / ไม่เป็นเลย", action: () => submitAnswer(0) },
+                { text: "📉 เป็นบางวัน", action: () => submitAnswer(1) },
+                { text: "📈 เป็นบ่อยครั้ง/เกือบทุกวัน", action: () => submitAnswer(2) }
+            ]);
+        } else {
+            showSurveyResult();
+        }
+    }
+
+    function submitAnswer(score) {
+        totalScore += score;
+        currentQuestionIndex++;
+        nextSurveyQuestion();
+    }
+
+    function showSurveyResult() {
+        isSurveyActive = false;
+        let resultHTML = "";
+
+        if (surveyType === "depression") {
+            resultHTML = `📋 **สรุปผลการประเมินภาวะอารมณ์ (DSM-5 เบื้องต้น)**<br>-------------------------<br>`;
+            if (totalScore >= 9) {
+                resultHTML += `🔴 **ผลลัพธ์:** มีแนวโน้มเผชิญ **ภาวะซึมเศร้าระดับรุนแรง (Severe Risk)**<br>แนะนำให้เข้าพบจิตแพทย์เพื่อรับการประเมินและดูแลด้วยยาปรับสารเคมีในสมองร่วมกับจิตบำบัดอย่างเร่งด่วนครับ โทรสายด่วน 1323 เพื่อขอคำปรึกษาได้ทันที`;
+            } else if (totalScore >= 4) {
+                resultHTML += `🟡 **ผลลัพธ์:** มีภาวะซึมเศร้าหรือเครียด **ระดับปานกลาง (Moderate Risk)**<br>แนะนำให้ลองฝึกเทคนิค Behavioral Activation (ทำกิจกรรมสั้น ๆ ที่ชอบ) ออกเดินรับแสงแดด และหากไม่ดีขึ้นใน 2 สัปดาห์ควรปรึกษาผู้เชี่ยวชาญครับ`;
+            } else {
+                resultHTML += `🟢 **ผลลัพธ์:** ความเสี่ยงต่ำ (Low Risk)<br>อารมณ์ยังอยู่ในเกณฑ์ปกติ แต่อาจล้าจากความเครียดชั่วคราว ควรนอนหลับให้เพียงพอและผ่อนคลายจิตใจครับ`;
+            }
+        } else if (surveyType === "insomnia") {
+            resultHTML = `📋 **สรุปผลการคัดกรองภาวะนอนไม่หลับ**<br>-------------------------<br>`;
+            if (totalScore >= 5) {
+                resultHTML += `🔴 **ผลลัพธ์:** มีภาวะนอนไม่หลับเด่นชัด (Clinical Insomnia)<br>แนะนำให้ฝึกวินัย Sleep Hygiene (กฎไม่เล่นมือถือก่อนนอน, ลุกจากเตียงหากนอนไม่หลับใน 20 นาที) หากเป็นนานเกิน 1 เดือน ควรปรึกษาแพทย์ครับ`;
+            } else {
+                resultHTML += `🟢 **ผลลัพธ์:** นอนไม่หลับชั่วคราว (Normal/Mild)<br>ปรับเวลานอนให้คงที่ งดคาเฟอีนหลังเที่ยงวัน จะช่วยให้ดีขึ้นครับ`;
+            }
+        }
+        appendMessage(resultHTML, "bot");
+    }
+
+    function createOptionButtons(options) {
+        const oldContainer = document.querySelector('.option-buttons');
+        if (oldContainer) oldContainer.remove();
+
+        const btnContainer = document.createElement('div');
+        btnContainer.classList.add('option-buttons');
+
+        options.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.classList.add('opt-btn');
+            btn.innerText = opt.text;
+            btn.onclick = () => {
+                btnContainer.remove();
+                appendMessage(`<i>เลือก: ${opt.text}</i>`, 'user');
+                opt.action();
+            };
+            btnContainer.appendChild(btn);
+        });
+        chatMessages.appendChild(btnContainer);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 </script>
 
