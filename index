@@ -1,15 +1,71 @@
+# AI Mental Health Chatbot (HTML เดียว ใช้งานได้จริง)
+
+ปัญหาที่โค้ดก่อนหน้าใช้ไม่ได้ เพราะ:
+
+* Browser บางตัว block การเรียก OpenAI API ตรง ๆ
+* API Key ยังไม่ได้ใส่
+* เปิดไฟล์แบบ double click (`file://`) ทำให้ fetch error
+* ยังไม่ได้ใช้โมเดล/API ที่ถูกต้อง
+
+วิธีที่ง่ายและใช้ได้จริงที่สุดคือ:
+
+1. ใช้ OpenAI API
+2. เปิดผ่าน Live Server
+3. ใส่ API Key
+
+---
+
+# STEP 1 ติดตั้ง VS Code
+
+ดาวน์โหลด:
+
+[https://code.visualstudio.com](https://code.visualstudio.com)
+
+---
+
+# STEP 2 ติดตั้ง Live Server
+
+ใน VS Code:
+
+Extensions → ค้นหา:
+
+```text
+Live Server
+```
+
+ติดตั้ง
+
+---
+
+# STEP 3 สมัคร OpenAI
+
+[https://platform.openai.com](https://platform.openai.com)
+
+สร้าง API Key
+
+---
+
+# STEP 4 สร้างไฟล์ index.html
+
+วางโค้ดนี้ทั้งหมด
+
+```html
 <!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>AI Therapist</title>
 
 <style>
 
+*{
+    box-sizing:border-box;
+    font-family:Tahoma,sans-serif;
+}
+
 body{
-    font-family:Tahoma;
+    margin:0;
     background:#edf2f7;
     display:flex;
     justify-content:center;
@@ -19,19 +75,20 @@ body{
 
 .container{
     width:430px;
-    height:730px;
+    max-width:95%;
+    height:720px;
     background:white;
     border-radius:20px;
     overflow:hidden;
+    box-shadow:0 5px 20px rgba(0,0,0,.15);
     display:flex;
     flex-direction:column;
-    box-shadow:0 5px 20px rgba(0,0,0,.15);
 }
 
 .header{
     background:#4a90e2;
     color:white;
-    padding:20px;
+    padding:18px;
     text-align:center;
 }
 
@@ -48,6 +105,7 @@ body{
     border-radius:18px;
     margin-bottom:12px;
     line-height:1.7;
+    white-space:pre-wrap;
 }
 
 .bot{
@@ -66,24 +124,26 @@ body{
     border-top:1px solid #ddd;
 }
 
-input{
+.input-area input{
     flex:1;
-    padding:15px;
     border:none;
-    outline:none;
+    padding:15px;
     font-size:16px;
+    outline:none;
 }
 
-button{
+.input-area button{
     width:90px;
     border:none;
     background:#4a90e2;
     color:white;
+    cursor:pointer;
 }
 
 .typing{
     color:#777;
     font-style:italic;
+    margin-bottom:10px;
 }
 
 </style>
@@ -94,23 +154,14 @@ button{
 <div class="container">
 
     <div class="header">
-
         <h2>🧠 AI Therapist</h2>
-
-        <p>
-            พื้นที่ปลอดภัยสำหรับการพูดคุย
-        </p>
-
+        <p>พื้นที่ปลอดภัยสำหรับการพูดคุย</p>
     </div>
 
     <div class="chat-box" id="chatBox">
 
         <div class="message bot">
-
-            สวัสดี 😊<br><br>
-
-            วันนี้คุณรู้สึกอย่างไรบ้าง
-
+            สวัสดี 😊\n\nฉันพร้อมรับฟังคุณนะ วันนี้เป็นยังไงบ้าง
         </div>
 
     </div>
@@ -133,17 +184,17 @@ button{
 
 <script>
 
-// =======================
-// OPENAI API KEY
-// =======================
+// =========================
+// ใส่ API KEY ของคุณ
+// =========================
 
-const API_KEY = "YOUR_API_KEY";
+const API_KEY = "ใส่_API_KEY_ตรงนี้";
 
-// =======================
-// MEMORY
-// =======================
+// =========================
+// Conversation Memory
+// =========================
 
-let conversation = [
+let messages = [
 
 {
     role:"system",
@@ -151,31 +202,28 @@ let conversation = [
 
 คุณคือ AI นักบำบัดสุขภาพจิต
 
-หน้าที่:
-- พูดอย่างอบอุ่น
-- ใช้ reflective listening
-- วิเคราะห์อารมณ์
-- วิเคราะห์ความเสี่ยง
-- ช่วยผู้ใช้สำรวจความคิด
-- ตอบเหมือนมนุษย์จริง
-- จำบริบทการคุย
+กฎการตอบ:
 - พูดภาษาไทยธรรมชาติ
-- ห้ามตอบซ้ำ
-- ห้ามตอบแข็ง
-- ถามต่อแบบ therapist
-- หากเสี่ยงฆ่าตัวตาย ให้แนะนำสายด่วน 1323
+- พูดเหมือนนักจิตวิทยา
+- ใช้ empathy สูง
+- ตอบไม่ซ้ำ
+- วิเคราะห์อารมณ์
+- จำบริบท
+- พูดอบอุ่น
+- ถามต่อเหมือน therapist
+- หลีกเลี่ยงการตัดสินผู้ใช้
+- หากผู้ใช้เสี่ยงทำร้ายตัวเอง ให้แนะนำสายด่วน 1323
 - ห้ามวินิจฉัยโรคแทนแพทย์
 - ให้ข้อมูลสุขภาพจิตที่ถูกต้อง
-- ตอบเหมือนนักจิตวิทยาที่มี empathy สูง
 
 `
 }
 
 ];
 
-// =======================
-// UI
-// =======================
+// =========================
+// CHAT UI
+// =========================
 
 const chatBox = document.getElementById("chatBox");
 
@@ -184,10 +232,9 @@ function addMessage(text,sender){
     const div = document.createElement("div");
 
     div.classList.add("message");
-
     div.classList.add(sender);
 
-    div.innerHTML = text;
+    div.innerText = text;
 
     chatBox.appendChild(div);
 
@@ -202,25 +249,29 @@ function showTyping(){
 
     div.classList.add("typing");
 
-    div.innerHTML = "AI กำลังพิมพ์...";
+    div.innerText = "AI กำลังพิมพ์...";
 
     chatBox.appendChild(div);
+
+    chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-function removeTyping(){
+function hideTyping(){
 
     const typing = document.getElementById("typing");
 
-    if(typing) typing.remove();
+    if(typing){
+        typing.remove();
+    }
 }
 
-// =======================
+// =========================
 // OPENAI CHAT
-// =======================
+// =========================
 
 async function askAI(userText){
 
-    conversation.push({
+    messages.push({
         role:"user",
         content:userText
     });
@@ -239,20 +290,27 @@ async function askAI(userText){
 
                 model:"gpt-4o-mini",
 
-                messages:conversation,
+                messages:messages,
 
-                temperature:0.9
+                temperature:0.9,
 
+                max_tokens:300
             })
         }
     );
 
+    if(!response.ok){
+
+        const errorText = await response.text();
+
+        throw new Error(errorText);
+    }
+
     const data = await response.json();
 
-    const aiReply =
-        data.choices[0].message.content;
+    const aiReply = data.choices[0].message.content;
 
-    conversation.push({
+    messages.push({
         role:"assistant",
         content:aiReply
     });
@@ -260,14 +318,13 @@ async function askAI(userText){
     return aiReply;
 }
 
-// =======================
+// =========================
 // SEND MESSAGE
-// =======================
+// =========================
 
 async function sendMessage(){
 
-    const input =
-        document.getElementById("userInput");
+    const input = document.getElementById("userInput");
 
     const text = input.value.trim();
 
@@ -281,18 +338,18 @@ async function sendMessage(){
 
     try{
 
-        const aiReply = await askAI(text);
+        const reply = await askAI(text);
 
-        removeTyping();
+        hideTyping();
 
-        addMessage(aiReply,"bot");
+        addMessage(reply,"bot");
 
     }catch(error){
 
-        removeTyping();
+        hideTyping();
 
         addMessage(
-            "เกิดข้อผิดพลาดในการเชื่อมต่อ AI",
+            "เกิดข้อผิดพลาด: " + error.message,
             "bot"
         );
 
@@ -300,16 +357,15 @@ async function sendMessage(){
     }
 }
 
-// =======================
-// ENTER
-// =======================
+// =========================
+// ENTER KEY
+// =========================
 
 document
 .getElementById("userInput")
 .addEventListener("keypress",function(e){
 
-    if(e.key==="Enter"){
-
+    if(e.key === "Enter"){
         sendMessage();
     }
 });
@@ -318,3 +374,73 @@ document
 
 </body>
 </html>
+```
+
+---
+
+# STEP 5 วิธีรัน
+
+ใน VS Code:
+
+1. เปิดไฟล์ index.html
+2. คลิกขวา
+3. เลือก:
+
+```text
+Open with Live Server
+```
+
+เว็บจะเปิดประมาณ:
+
+```text
+http://127.0.0.1:5500/index.html
+```
+
+---
+
+# ถ้ายัง Error
+
+## ปัญหา 401
+
+แปลว่า API Key ผิด
+
+---
+
+## ปัญหา quota exceeded
+
+แปลว่า OpenAI ยังไม่ได้เติมเงิน
+
+ไปที่:
+
+[https://platform.openai.com/billing](https://platform.openai.com/billing)
+
+---
+
+## ปัญหา CORS หรือ fetch failed
+
+อย่าเปิดไฟล์ด้วย double click
+
+ต้องใช้:
+
+```text
+Live Server
+```
+
+เท่านั้น
+
+---
+
+# ขั้นต่อไปที่แนะนำ
+
+หลังจากใช้งานได้แล้ว ค่อยเพิ่ม:
+
+* วิเคราะห์ PHQ-9
+* วิเคราะห์ 8Q
+* ตรวจจับความเสี่ยงฆ่าตัวตาย
+* บันทึก Google Sheets
+* ระบบ Login
+* Dashboard นักจิตวิทยา
+* Memory ระยะยาว
+* Therapist Prompt ขั้นสูง
+* Voice AI
+* AI วิเคราะห์อารมณ์จากข้อความ
