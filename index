@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>AI Therapist</title>
+
+<style>
+
+body{
+    font-family:Tahoma;
+    background:#edf2f7;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+}
+
+.container{
+    width:430px;
+    height:730px;
+    background:white;
+    border-radius:20px;
+    overflow:hidden;
+    display:flex;
+    flex-direction:column;
+    box-shadow:0 5px 20px rgba(0,0,0,.15);
+}
+
+.header{
+    background:#4a90e2;
+    color:white;
+    padding:20px;
+    text-align:center;
+}
+
+.chat-box{
+    flex:1;
+    overflow-y:auto;
+    padding:15px;
+    background:#f7fafc;
+}
+
+.message{
+    max-width:85%;
+    padding:14px;
+    border-radius:18px;
+    margin-bottom:12px;
+    line-height:1.7;
+}
+
+.bot{
+    background:white;
+    border:1px solid #ddd;
+}
+
+.user{
+    background:#4a90e2;
+    color:white;
+    margin-left:auto;
+}
+
+.input-area{
+    display:flex;
+    border-top:1px solid #ddd;
+}
+
+input{
+    flex:1;
+    padding:15px;
+    border:none;
+    outline:none;
+    font-size:16px;
+}
+
+button{
+    width:90px;
+    border:none;
+    background:#4a90e2;
+    color:white;
+}
+
+.typing{
+    color:#777;
+    font-style:italic;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+
+        <h2>🧠 AI Therapist</h2>
+
+        <p>
+            พื้นที่ปลอดภัยสำหรับการพูดคุย
+        </p>
+
+    </div>
+
+    <div class="chat-box" id="chatBox">
+
+        <div class="message bot">
+
+            สวัสดี 😊<br><br>
+
+            วันนี้คุณรู้สึกอย่างไรบ้าง
+
+        </div>
+
+    </div>
+
+    <div class="input-area">
+
+        <input
+            type="text"
+            id="userInput"
+            placeholder="พิมพ์ข้อความ..."
+        >
+
+        <button onclick="sendMessage()">
+            ส่ง
+        </button>
+
+    </div>
+
+</div>
+
+<script>
+
+// =======================
+// OPENAI API KEY
+// =======================
+
+const API_KEY = "YOUR_API_KEY";
+
+// =======================
+// MEMORY
+// =======================
+
+let conversation = [
+
+{
+    role:"system",
+    content:`
+
+คุณคือ AI นักบำบัดสุขภาพจิต
+
+หน้าที่:
+- พูดอย่างอบอุ่น
+- ใช้ reflective listening
+- วิเคราะห์อารมณ์
+- วิเคราะห์ความเสี่ยง
+- ช่วยผู้ใช้สำรวจความคิด
+- ตอบเหมือนมนุษย์จริง
+- จำบริบทการคุย
+- พูดภาษาไทยธรรมชาติ
+- ห้ามตอบซ้ำ
+- ห้ามตอบแข็ง
+- ถามต่อแบบ therapist
+- หากเสี่ยงฆ่าตัวตาย ให้แนะนำสายด่วน 1323
+- ห้ามวินิจฉัยโรคแทนแพทย์
+- ให้ข้อมูลสุขภาพจิตที่ถูกต้อง
+- ตอบเหมือนนักจิตวิทยาที่มี empathy สูง
+
+`
+}
+
+];
+
+// =======================
+// UI
+// =======================
+
+const chatBox = document.getElementById("chatBox");
+
+function addMessage(text,sender){
+
+    const div = document.createElement("div");
+
+    div.classList.add("message");
+
+    div.classList.add(sender);
+
+    div.innerHTML = text;
+
+    chatBox.appendChild(div);
+
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+function showTyping(){
+
+    const div = document.createElement("div");
+
+    div.id = "typing";
+
+    div.classList.add("typing");
+
+    div.innerHTML = "AI กำลังพิมพ์...";
+
+    chatBox.appendChild(div);
+}
+
+function removeTyping(){
+
+    const typing = document.getElementById("typing");
+
+    if(typing) typing.remove();
+}
+
+// =======================
+// OPENAI CHAT
+// =======================
+
+async function askAI(userText){
+
+    conversation.push({
+        role:"user",
+        content:userText
+    });
+
+    const response = await fetch(
+        "https://api.openai.com/v1/chat/completions",
+        {
+            method:"POST",
+
+            headers:{
+                "Content-Type":"application/json",
+                "Authorization":"Bearer " + API_KEY
+            },
+
+            body:JSON.stringify({
+
+                model:"gpt-4o-mini",
+
+                messages:conversation,
+
+                temperature:0.9
+
+            })
+        }
+    );
+
+    const data = await response.json();
+
+    const aiReply =
+        data.choices[0].message.content;
+
+    conversation.push({
+        role:"assistant",
+        content:aiReply
+    });
+
+    return aiReply;
+}
+
+// =======================
+// SEND MESSAGE
+// =======================
+
+async function sendMessage(){
+
+    const input =
+        document.getElementById("userInput");
+
+    const text = input.value.trim();
+
+    if(text === "") return;
+
+    addMessage(text,"user");
+
+    input.value = "";
+
+    showTyping();
+
+    try{
+
+        const aiReply = await askAI(text);
+
+        removeTyping();
+
+        addMessage(aiReply,"bot");
+
+    }catch(error){
+
+        removeTyping();
+
+        addMessage(
+            "เกิดข้อผิดพลาดในการเชื่อมต่อ AI",
+            "bot"
+        );
+
+        console.log(error);
+    }
+}
+
+// =======================
+// ENTER
+// =======================
+
+document
+.getElementById("userInput")
+.addEventListener("keypress",function(e){
+
+    if(e.key==="Enter"){
+
+        sendMessage();
+    }
+});
+
+</script>
+
+</body>
+</html>
